@@ -8,64 +8,59 @@ packages, specifically the `LlmChatView` and the `DartanticProvider`.
 ## Core Components
 
 ### 1. Dependencies
-- `flutter_ai_toolkit`: For LLM integration
-- `flutter_ai_providers`: For the DartanticProvider
+- `dartantic_ai`: For Agent and Tool support
 
 ### 2. Tool Configuration
 
 #### DateTime Tool
-Purpose: Anchor temporal references in the current system time Functionality:
-- Provides current date/time
-- Returns ISO-8601 formatted strings for consistency
+Purpose: Anchor temporal references in the current system time
+Name: get-current-date-time
+Description: Get the current local date and time in ISO-8601 format
 
 #### Zapier MCP Server
-Purpose: Interface with Google Calendar Configuration:
+Purpose: Interface with Google Calendar
+Configuration:
+- Server ID: google-calendar
 - Calendar ID: csells@sellsbrothers.com
+- URL: Configured via ZAPIER_MCP_URL environment variable
 
-Capabilities:
-- Read calendar events
-- Create new events
-- Modify existing events
-- Delete events
-- Search for specific events
-
-### 3. System Prompt Design
-Key elements to include:
-- Explicit instruction to use the DateTime Tool for all temporal references
-- Clear format for date/time responses
-- Specific calendar ID to use
+### 3. Agent Configuration
+- Model: gemini:gemini-2.5-flash
+- System Prompt:
+  ```
+  You are a helpful calendar assistant.
+  
+  You have access to tools to get the current date/time and to interact with
+  Google Calendar.
+  
+  Always use the get-current-date-time tool to anchor temporal references like
+  "today" and "tomorrow".
+  
+  The user's primary calendar is csells@sellsbrothers.com.
+  ```
 
 ### 4. Chat Interface
-Provided by the Flutter AI Toolkit via the `LlmChatView`
+Provided by `LlmChatView` with:
+- Welcome message: "Hi! I can help you manage your calendar. What can I do for you?"
+- Example suggestions:
+  1. "What's on my schedule today?"
+  2. "Schedule a two-hour block for focused work tomorrow."
+  3. "Can I skip work and go to the movies tomorrow?"
 
-### 5. User Interactions
+### 5. Error Handling
+- Loading state during agent setup
+- Graceful disconnection of MCP server
+- Async state management using unawaited where appropriate
 
-#### Supported Queries
-1. Schedule Queries
-   - "What's on my schedule today?"
-   - "What meetings do I have this afternoon?"
-   - "Show me my availability next week"
+### 6. Privacy & Security
+- No persistent chat history
+- Secure handling of Zapier MCP URL via environment variable (ZAPIER_MCP_URL)
+- Private calendar access via csells@sellsbrothers.com
 
-2. Event Management
-   - "Schedule a two-hour block for dartantic tomorrow"
-   - "Move my 2pm meeting to 3pm"
-   - "Cancel my morning meetings"
-
-3. Complex Queries
-   - "Find a free 2-hour block this week for a project review"
-   - "When's my next meeting with the Flutter team?"
-
-### 6. Error Handling
-- Clear error messages for calendar access issues
-- Confirmation requests for destructive actions
-- Network connectivity handling
-
-### 7. Privacy & Security
-- No storage of chat history (everything is in memory and transient)
-- Secure handling of Zapier MCP server URL via an environment variable
-
-## Implementation
-- Basic chat interface
-- DateTime Tool integration
-- Simple calendar queries
-- Event creation/modification
+## Implementation Status
+- [x] Basic chat interface with LlmChatView
+- [x] DateTime Tool integration
+- [x] Zapier MCP server connection
+- [x] Welcome message and suggestions
+- [x] Loading state and error handling
+- [x] Proper async resource management

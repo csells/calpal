@@ -70,7 +70,7 @@ The user's primary calendar is csells@sellsbrothers.com.
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('CalPal')),
+    appBar: AppBar(title: const Text('CalPal - Your Calendar Chat Assistant')),
     body:
         _loading
             ? const Center(child: CircularProgressIndicator())
