@@ -35,6 +35,9 @@ class _ChatScreenState extends State<_ChatScreen> {
 
   Future<void> _setupAgent() async {
     setState(() => _loading = true);
+    assert(
+      _zapierServer.url != null && _zapierServer.url!.toString().isNotEmpty,
+    );
 
     _agent = Agent(
       'gemini:gemini-2.5-flash',
