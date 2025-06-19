@@ -1,0 +1,10 @@
+{
+  "workbench.colorCustomizations": {
+    "activityBar.background": "#5B0739",
+    "titleBar.activeBackground": "#7F0A50",
+    "titleBar.activeForeground": "#FFFBFD"
+  },
+  "dart.env": {
+    "ZAPIER_MCP_URL": "https://mcp.zapier.com/api/mcp/s/MmZiZDhmZDgtZDFmOS00N2JlLTg2MmEtYzI0NzdmYTA3ODBhOjMwZDg4Zjg4LTcwOWQtNDA1Zi1hZjYwLWI2NDIwMzg4ODIxYw==/mcp"
+  }
+}

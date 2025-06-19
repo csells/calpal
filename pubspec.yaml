@@ -1,0 +1,21 @@
+name: calpal
+description: A calendar chat app using Flutter AI Toolkit
+publish_to: 'none'
+
+environment:
+  sdk: ^3.7.0
+
+dependencies:
+  dartantic_ai: ^0.8.2
+  flutter:
+    sdk: flutter
+  flutter_ai_providers: ^0.3.0
+  flutter_ai_toolkit: ^0.9.1
+
+dev_dependencies:
+  all_lint_rules_community: ^0.0.43
+  flutter_test:
+    sdk: flutter
+
+flutter:
+  uses-material-design: true
