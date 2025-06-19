@@ -25,6 +25,7 @@ class _ChatScreenState extends State<_ChatScreen> {
   );
 
   late final Agent _agent;
+  var _loading = true;
 
   @override
   void initState() {
@@ -33,6 +34,8 @@ class _ChatScreenState extends State<_ChatScreen> {
   }
 
   Future<void> _setupAgent() async {
+    setState(() => _loading = true);
+
     _agent = Agent(
       'gemini:gemini-2.5-flash',
       systemPrompt: '''
@@ -55,6 +58,8 @@ The user's primary calendar is csells@sellsbrothers.com.
         ...(await _zapierServer.getTools()),
       ],
     );
+
+    setState(() => _loading = false);
   }
 
   @override
@@ -66,6 +71,19 @@ The user's primary calendar is csells@sellsbrothers.com.
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(title: const Text('CalPal')),
-    body: LlmChatView(provider: DartanticProvider(_agent)),
+    body:
+        _loading
+            ? const Center(child: CircularProgressIndicator())
+            : LlmChatView(
+              provider: DartanticProvider(_agent),
+              welcomeMessage:
+                  'Hi! I can help you manage your calendar. '
+                  'What can I do for you?',
+              suggestions: const [
+                "What's on my schedule today?",
+                'Schedule a two-hour block for focused work tomorrow.',
+                'Can I skip work and go to the movies tomorrow?',
+              ],
+            ),
   );
 }
