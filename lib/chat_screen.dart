@@ -111,22 +111,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 overflow: TextOverflow.ellipsis,
                 style: courierNewStyle,
               ),
-              onTap: () {
-                unawaited(
-                  showDialog<void>(
-                    context: context,
-                    builder:
-                        (context) => AlertDialog(
-                          content: SingleChildScrollView(
-                            child: SelectableText(
-                              messageText,
-                              style: courierNewStyle,
-                            ),
-                          ),
-                        ),
-                  ),
-                );
-              },
+              onTap: () => _messageBox(context, messageText, courierNewStyle),
             );
           }
 
@@ -141,27 +126,36 @@ class _ChatScreenState extends State<ChatScreen> {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
-            onTap: () {
-              unawaited(
-                showDialog<void>(
-                  context: context,
-                  builder:
-                      (context) => AlertDialog(
-                        content: SingleChildScrollView(
-                          child: SelectableText(
-                            toolText,
-                            style: courierNewStyle,
-                          ),
-                        ),
-                      ),
-                ),
-              );
-            },
+            onTap: () => _messageBox(context, toolText, courierNewStyle),
           );
         },
       );
     },
   );
+
+  void _messageBox(
+    BuildContext context,
+    String toolText,
+    TextStyle courierNewStyle,
+  ) {
+    unawaited(
+      showDialog<void>(
+        context: context,
+        builder:
+            (context) => Dialog(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 800),
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: SingleChildScrollView(
+                    child: SelectableText(toolText, style: courierNewStyle),
+                  ),
+                ),
+              ),
+            ),
+      ),
+    );
+  }
 
   String _toolText(Tool tool) {
     const encoder = JsonEncoder.withIndent('  ');
