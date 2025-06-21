@@ -1,12 +1,12 @@
 // ignore_for_file: avoid_print
 
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:dartantic_ai/dartantic_ai.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_ai_toolkit/flutter_ai_toolkit.dart';
-import 'package:logging/logging.dart';
 import 'package:split_view/split_view.dart';
 
 import 'dartantic_provider.dart';
@@ -24,10 +24,8 @@ class _ChatScreenState extends State<ChatScreen> {
     url: Uri.parse(Platform.environment['ZAPIER_MCP_URL']!),
   );
 
-  late final Agent _agent;
   late final DartanticProvider _provider;
   var _loading = true;
-  var _showMessagesView = true;
 
   @override
   void initState() {
@@ -38,45 +36,7 @@ class _ChatScreenState extends State<ChatScreen> {
   Future<void> _setupAgent() async {
     setState(() => _loading = true);
 
-    Logger.root.level = Level.ALL; // INFO
-    Logger.root.onRecord.listen(
-      (record) => debugPrint('\n${record.message}\n'),
-    );
-
-    final zapierServer = McpClient.remote(
-      'google-calendar',
-      url: Uri.parse(Platform.environment['ZAPIER_MCP_URL']!),
-    );
-    final zapierTools = await zapierServer.listTools();
-
-    _agent = Agent(
-      'google',
-      systemPrompt: '''
-You are a helpful calendar assistant.
-Make sure you use the get-current-date-time tool FIRST to ground yourself.
-You have access to tools to interact with Google Calendar.
-You already have permission to call any Google Calendar tool.
-Never ask the user for additional access or confirmation.
-My Google calendar email is csells@sellsbrothers.com.
-When calling google_calendar_find_event, use a specific date instead of works
-like "today" or "tomorrow".
-''',
-      tools: [
-        Tool(
-          name: 'get-current-date-time',
-          description: 'Get the current local date and time in ISO-8601 format',
-          onCall: (_) async => {'datetime': DateTime.now().toIso8601String()},
-        ),
-        ...zapierTools,
-      ],
-      toolCallingMode: ToolCallingMode.multiStep,
-    );
-
-    for (final tool in zapierTools) {
-      print('Tool: ${tool.name}, ${tool.description}');
-    }
-
-    _provider = DartanticProvider(_agent);
+    _provider = DartanticProvider(await _zapierAgent());
     setState(() => _loading = false);
   }
 
@@ -88,42 +48,28 @@ like "today" or "tomorrow".
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(
-      title: const Text('CalPal - Your Calendar Chat Assistant'),
-      actions: [
-        IconButton(
-          onPressed:
-              () => setState(() => _showMessagesView = !_showMessagesView),
-          icon: Icon(
-            _showMessagesView ? Icons.visibility_off : Icons.visibility,
-          ),
-        ),
-      ],
-    ),
+    appBar: AppBar(title: const Text('CalPal - Your Calendar Chat Assistant')),
     body:
         _loading
             ? const Center(child: CircularProgressIndicator())
             : buildSplitView(),
   );
 
-  Widget buildSplitView() =>
-      _showMessagesView
-          ? SplitView(
-            viewMode: SplitViewMode.Horizontal,
-            gripColor: Colors.transparent,
-            indicator: const SplitIndicator(
-              viewMode: SplitViewMode.Horizontal,
-              color: Colors.grey,
-            ),
-            gripColorActive: Colors.transparent,
-            activeIndicator: const SplitIndicator(
-              viewMode: SplitViewMode.Horizontal,
-              isActive: true,
-              color: Colors.black,
-            ),
-            children: [buildChatView(), buildMessagesView()],
-          )
-          : buildChatView();
+  Widget buildSplitView() => SplitView(
+    viewMode: SplitViewMode.Horizontal,
+    gripColor: Colors.transparent,
+    indicator: const SplitIndicator(
+      viewMode: SplitViewMode.Horizontal,
+      color: Colors.grey,
+    ),
+    gripColorActive: Colors.transparent,
+    activeIndicator: const SplitIndicator(
+      viewMode: SplitViewMode.Horizontal,
+      isActive: true,
+      color: Colors.black,
+    ),
+    children: [buildChatView(), buildMessagesView()],
+  );
 
   LlmChatView buildChatView() => LlmChatView(
     provider: _provider,
@@ -140,22 +86,34 @@ like "today" or "tomorrow".
   Widget buildMessagesView() => ListenableBuilder(
     listenable: _provider,
     builder: (context, child) {
+      const courierNewStyle = TextStyle(
+        fontFamily: 'Courier New',
+        fontWeight: FontWeight.bold,
+        fontSize: 16,
+      );
       final messages = _provider.messages.toList().reversed.toList();
       return ListView.builder(
-        reverse: true,
         itemCount: messages.length,
+        reverse: true,
         itemBuilder: (context, index) {
           final message = messages[index];
           final text = _messageText(message);
           return ListTile(
-            title: Text(text, maxLines: 1, overflow: TextOverflow.ellipsis),
+            title: Text(
+              text,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: courierNewStyle,
+            ),
             onTap: () {
               unawaited(
                 showDialog<void>(
                   context: context,
                   builder:
                       (context) => AlertDialog(
-                        content: SingleChildScrollView(child: Text(text)),
+                        content: SingleChildScrollView(
+                          child: SelectableText(text, style: courierNewStyle),
+                        ),
                       ),
                 ),
               );
@@ -182,9 +140,71 @@ like "today" or "tomorrow".
   String _toolText(ToolPart part) {
     switch (part.kind) {
       case ToolPartKind.call:
-        return '[Tool: ${part.name}(${part.arguments})]';
+        return '[Tool.call: ${part.name}(${part.arguments})]';
       case ToolPartKind.result:
-        return '[Tool Result: ${part.name}(...) => ${part.result}]';
+        const encoder = JsonEncoder.withIndent('  ');
+        var result = part.result;
+        // The result from Zapier comes back as a map with a 'result' key
+        // that is a JSON string. We decode it to make it readable.
+        if (result.containsKey('result')) {
+          final resultMap = Map<String, dynamic>.from(result);
+          final resultValue = resultMap['result'];
+          if (resultValue is String) {
+            try {
+              resultMap['result'] = json.decode(resultValue);
+              result = resultMap;
+            } on Exception catch (e) {
+              // Ignore if it's not valid JSON.
+            }
+          }
+        }
+        final prettyResult = encoder.convert(result);
+        return '[Tool.result: ${part.name}(...) => $prettyResult]';
     }
   }
+}
+
+Future<Agent> _zapierAgent() async {
+  final zapierServer = McpClient.remote(
+    'google-calendar',
+    url: Uri.parse(Platform.environment['ZAPIER_MCP_URL']!),
+  );
+
+  final zapierTools = await zapierServer.listTools();
+  for (final tool in zapierTools) {
+    print('Tool: ${tool.name}, ${tool.description}');
+  }
+
+  return Agent(
+    'google',
+    systemPrompt: '''
+You are a helpful calendar assistant.
+
+1. **Ground yourself**
+   * Always call the get-current-date-time tool **first**.
+
+2. **Tool permissions**
+   * You already have permission to call any Google Calendar tool.
+   * Never ask the user for additional access or confirmation.
+
+3. **Default calendar**
+   * My Google-calendar email is `csells@sellsbrothers.com`.
+   * Use that as the default `calendarId` unless the user says otherwise.
+
+4. **Searching a single calendar day**
+   * When the user asks for events for a specific <DATE>, build the date window like this:
+
+     * `start_time_before` -> "`<DATE>T23:59:59`" (end of day), i.e. the latest an event may begin
+     * `end_time_after`  -> "`<DATE>T00:00:00`" (start of day), i.e. the earliest an event may end
+''',
+    tools: [
+      Tool(
+        name: 'get-current-date-time',
+        description: 'Get the current local date and time in ISO-8601 format',
+        onCall: (_) async => {'datetime': DateTime.now().toIso8601String()},
+      ),
+      ...zapierTools,
+    ],
+    toolCallingMode: ToolCallingMode.multiStep,
+  );
 }

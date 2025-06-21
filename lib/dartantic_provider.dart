@@ -55,7 +55,7 @@ class DartanticProvider extends LlmProvider with ChangeNotifier {
       attachments: attachments,
     )) {
       messages = response.messages;
-      llmMessage.append(response.output);
+      if (response.output.isNotEmpty) llmMessage.append(response.output);
       yield response.output;
     }
 
