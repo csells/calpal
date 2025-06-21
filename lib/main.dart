@@ -1,9 +1,15 @@
+// ignore_for_file: avoid_print
+
 import 'dart:async';
+import 'dart:io';
 
 import 'package:dartantic_ai/dartantic_ai.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_ai_providers/flutter_ai_providers.dart';
+// import 'package:flutter_ai_providers/flutter_ai_providers.dart';
 import 'package:flutter_ai_toolkit/flutter_ai_toolkit.dart';
+import 'package:logging/logging.dart';
+
+import 'dartantic_provider.dart';
 
 void main() => runApp(_MainApp());
 
@@ -19,9 +25,9 @@ class _ChatScreen extends StatefulWidget {
 }
 
 class _ChatScreenState extends State<_ChatScreen> {
-  final McpServer _zapierServer = McpServer.remote(
+  final _zapierServer = McpClient.remote(
     'google-calendar',
-    url: Uri.parse(const String.fromEnvironment('ZAPIER_MCP_URL')),
+    url: Uri.parse(Platform.environment['ZAPIER_MCP_URL']!),
   );
 
   late final Agent _agent;
@@ -35,22 +41,27 @@ class _ChatScreenState extends State<_ChatScreen> {
 
   Future<void> _setupAgent() async {
     setState(() => _loading = true);
-    assert(
-      _zapierServer.url != null && _zapierServer.url!.toString().isNotEmpty,
+
+    Logger.root.level = Level.ALL; // INFO
+    Logger.root.onRecord.listen(
+      (record) => debugPrint('\n${record.message}\n'),
     );
 
+    final zapierServer = McpClient.remote(
+      'google-calendar',
+      url: Uri.parse(Platform.environment['ZAPIER_MCP_URL']!),
+    );
+    final zapierTools = await zapierServer.listTools();
+
     _agent = Agent(
-      'gemini:gemini-2.5-flash',
+      'google',
       systemPrompt: '''
 You are a helpful calendar assistant.
-
-You have access to tools to get the current date/time and to interact with
-Google Calendar.
-
-Always use the get-current-date-time tool to anchor temporal references like
-"today" and "tomorrow".
-
-The user's primary calendar is csells@sellsbrothers.com.
+Make sure you use the get-current-date-time tool FIRST to ground yourself.
+You have access to tools to interact with Google Calendar.
+You already have permission to call any Google Calendar tool.
+Never ask the user for additional access or confirmation.
+My Google calendar email is csells@sellsbrothers.com.
 ''',
       tools: [
         Tool(
@@ -58,9 +69,14 @@ The user's primary calendar is csells@sellsbrothers.com.
           description: 'Get the current local date and time in ISO-8601 format',
           onCall: (_) async => {'datetime': DateTime.now().toIso8601String()},
         ),
-        ...(await _zapierServer.getTools()),
+        ...zapierTools,
       ],
+      toolCallingMode: ToolCallingMode.multiStep,
     );
+
+    for (final tool in zapierTools) {
+      print('Tool: ${tool.name}, ${tool.description}');
+    }
 
     setState(() => _loading = false);
   }

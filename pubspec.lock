@@ -17,14 +17,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.0.43"
-  anthropic_sdk_dart:
-    dependency: transitive
-    description:
-      name: anthropic_sdk_dart
-      sha256: ce7a5ddbc7479ce76b35a3d37ff2876bcacd1c647d7a549b53add3ac96b47243
-      url: "https://pub.dev"
-    source: hosted
-    version: "0.2.1"
   args:
     dependency: transitive
     description:
@@ -69,10 +61,10 @@ packages:
     dependency: transitive
     description:
       name: camera_avfoundation
-      sha256: e8113fc74ae4d5365b63d8d541203677741830a498143b1bfb74c80e8a4c5323
+      sha256: "71dacf6c30aee386617c2b72ad46517706f8ef625aa637313c0d4dc93ddd8d76"
       url: "https://pub.dev"
     source: hosted
-    version: "0.9.20"
+    version: "0.9.20+1"
   camera_platform_interface:
     dependency: transitive
     description:
@@ -133,10 +125,10 @@ packages:
     dependency: "direct main"
     description:
       name: dartantic_ai
-      sha256: "02f76bc6d06f1427edd584cd1b4733c556486277757c18003ece0747f55d127d"
+      sha256: d630037cfc86915d8ca0f01604d097acad05238f6731cc8d34d9029c94719c18
       url: "https://pub.dev"
     source: hosted
-    version: "0.8.2"
+    version: "0.9.0"
   dotprompt_dart:
     dependency: transitive
     description:
@@ -318,14 +310,6 @@ packages:
     description: flutter
     source: sdk
     version: "0.0.0"
-  flutter_ai_providers:
-    dependency: "direct main"
-    description:
-      name: flutter_ai_providers
-      sha256: "58c9f325124d76bd5f0214864df7b8d9ac2439261a24275ea22941c44704480e"
-      url: "https://pub.dev"
-    source: hosted
-    version: "0.3.0"
   flutter_ai_toolkit:
     dependency: "direct main"
     description:
@@ -520,16 +504,8 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "3.0.1"
-  llama_sdk:
-    dependency: transitive
-    description:
-      name: llama_sdk
-      sha256: "23fcec0a0992497869728d54f14138a852ebcd4f6bda3abd4fe900b0d1b44e23"
-      url: "https://pub.dev"
-    source: hosted
-    version: "0.0.5"
   logging:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: logging
       sha256: c8245ada5f1717ed44271ed1c26b8ce85ca3228fd2ffdb75468ab01979309d61
@@ -564,10 +540,10 @@ packages:
     dependency: transitive
     description:
       name: mcp_dart
-      sha256: "5a8b334da76fe7b8fa5b10b57a5344b3bac7ba8e6316379ef442708e0877eac1"
+      sha256: e05f00d6f438806b275b045ead72b580f7e9f43bff9ccacdbd95a4f20ae33702
       url: "https://pub.dev"
     source: hosted
-    version: "0.5.1"
+    version: "0.5.2"
   meta:
     dependency: transitive
     description:
@@ -592,22 +568,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.0.0"
-  ollama_dart:
-    dependency: transitive
-    description:
-      name: ollama_dart
-      sha256: c5c8656aa42e109b5a3e58a9b92661adc8204a5a1c312644c4b448ac2d413b95
-      url: "https://pub.dev"
-    source: hosted
-    version: "0.2.3"
   openai_dart:
     dependency: transitive
     description:
       name: openai_dart
-      sha256: c4f72563da8b1c4e841cc610d88ebc86bc6070ea2df2f164366e4be0227e8c0d
+      sha256: "995d2b74679e8129b4fc013efcb0ae2cacc46f6058b8b07d279a654be05d6d7a"
       url: "https://pub.dev"
     source: hosted
-    version: "0.5.1"
+    version: "0.5.2"
   path:
     dependency: transitive
     description:
