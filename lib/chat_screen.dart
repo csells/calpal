@@ -6,10 +6,9 @@ import 'dart:io';
 
 import 'package:dartantic_ai/dartantic_ai.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_ai_providers/flutter_ai_providers.dart';
 import 'package:flutter_ai_toolkit/flutter_ai_toolkit.dart';
 import 'package:split_view/split_view.dart';
-
-import 'dartantic_provider.dart';
 
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key});
@@ -257,6 +256,15 @@ class _ChatScreenState extends State<ChatScreen> {
       ];
     }
 
+    final tools = _tools!;
+    final toolUsages = StringBuffer();
+    for (final tool in tools) {
+      toolUsages.write('- Tool: ${tool.name}\n');
+      toolUsages.write('  - Description: ${tool.description}\n');
+      toolUsages.write('  - Input schema: ${tool.inputSchema}\n');
+      toolUsages.write('\n');
+    }
+
     final agent = Agent(
       model,
       systemPrompt: '''
@@ -273,18 +281,18 @@ You are a helpful calendar assistant.
    * My Google-calendar email is `csells@sellsbrothers.com`.
    * Use that as the default `calendarId` unless the user says otherwise.
 
-4. **Searching a single calendar day**
-   * When the user asks for events for a specific <DATE>, build the date window like this:
+4. **Tool usage**
+Before composing a tool call, carefully consider each tool's name, description
+input schema. In particular, pay close attention to required parameters and
+their descriptions. The tools will fail otherwise.
 
-     * `start_time_before` -> "`<DATE>T23:59:59`" (end of day), i.e. the latest an event may begin
-     * `end_time_after`  -> "`<DATE>T00:00:00`" (start of day), i.e. the earliest an event may end
+$toolUsages
 ''',
-      tools: _tools,
+      tools: tools,
     );
 
     setState(() {
       _provider = DartanticProvider(agent);
-      _tools = _tools!;
       _selectedModel = agent.model;
     });
   }

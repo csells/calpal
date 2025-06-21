@@ -17,6 +17,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.0.43"
+  anthropic_sdk_dart:
+    dependency: transitive
+    description:
+      name: anthropic_sdk_dart
+      sha256: ce7a5ddbc7479ce76b35a3d37ff2876bcacd1c647d7a549b53add3ac96b47243
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.2.1"
   args:
     dependency: transitive
     description:
@@ -310,6 +318,14 @@ packages:
     description: flutter
     source: sdk
     version: "0.0.0"
+  flutter_ai_providers:
+    dependency: "direct main"
+    description:
+      name: flutter_ai_providers
+      sha256: a5bb8eb8ecd7f5497c4020ddc5b959b0c2a4b8ad94d2d3aaad05084d6fed7a7a
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.3.2"
   flutter_ai_toolkit:
     dependency: "direct main"
     description:
@@ -504,6 +520,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "3.0.1"
+  llama_sdk:
+    dependency: transitive
+    description:
+      name: llama_sdk
+      sha256: "23fcec0a0992497869728d54f14138a852ebcd4f6bda3abd4fe900b0d1b44e23"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.0.5"
   logging:
     dependency: "direct main"
     description:
@@ -568,6 +592,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.0.0"
+  ollama_dart:
+    dependency: transitive
+    description:
+      name: ollama_dart
+      sha256: c5c8656aa42e109b5a3e58a9b92661adc8204a5a1c312644c4b448ac2d413b95
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.2.3"
   openai_dart:
     dependency: transitive
     description:
