@@ -24,22 +24,16 @@ class _ChatScreenState extends State<ChatScreen> {
     url: Uri.parse(Platform.environment['ZAPIER_MCP_URL']!),
   );
 
-  late final DartanticProvider _provider;
-  late final List<Tool> _tools;
-  var _loading = true;
+  DartanticProvider? _provider;
+  List<Tool>? _tools;
+  final _models = ['google', 'openai'];
+  late String _selectedModel;
 
   @override
   void initState() {
     super.initState();
-    unawaited(_setupAgent());
-  }
-
-  Future<void> _setupAgent() async {
-    setState(() => _loading = true);
-    final (:agent, :tools) = await _zapierAgentAndTools();
-    _provider = DartanticProvider(agent);
-    _tools = tools.toList();
-    setState(() => _loading = false);
+    _selectedModel = _models.first;
+    unawaited(_resetProviderAndTools(_selectedModel));
   }
 
   @override
@@ -50,29 +44,64 @@ class _ChatScreenState extends State<ChatScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('CalPal - Your Calendar Chat Assistant')),
+    appBar: AppBar(
+      title: const Text('CalPal - Your Calendar Chat Assistant'),
+      actions: [
+        DropdownButton<String>(
+          value: _selectedModel.split(RegExp('[:/]')).first,
+          items:
+              _models
+                  .map(
+                    (model) => DropdownMenuItem<String>(
+                      value: model,
+                      child: Text(model),
+                    ),
+                  )
+                  .toList(),
+          onChanged: (newModel) {
+            if (newModel != null && newModel != _selectedModel) {
+              setState(() => _selectedModel = newModel);
+              unawaited(_resetProviderAndTools(_selectedModel));
+            }
+          },
+          underline: const SizedBox.shrink(),
+        ),
+      ],
+    ),
     body:
-        _loading
+        _provider == null
             ? const Center(child: CircularProgressIndicator())
-            : SplitView(
-              viewMode: SplitViewMode.Horizontal,
-              gripColor: Colors.transparent,
-              indicator: const SplitIndicator(
-                viewMode: SplitViewMode.Horizontal,
-                color: Colors.grey,
-              ),
-              gripColorActive: Colors.transparent,
-              activeIndicator: const SplitIndicator(
-                viewMode: SplitViewMode.Horizontal,
-                isActive: true,
-                color: Colors.black,
-              ),
-              children: [buildChatView(), buildMessagesView()],
+            : Column(
+              children: [
+                Expanded(
+                  child: SplitView(
+                    viewMode: SplitViewMode.Horizontal,
+                    gripColor: Colors.transparent,
+                    indicator: const SplitIndicator(
+                      viewMode: SplitViewMode.Horizontal,
+                      color: Colors.grey,
+                    ),
+                    gripColorActive: Colors.transparent,
+                    activeIndicator: const SplitIndicator(
+                      viewMode: SplitViewMode.Horizontal,
+                      isActive: true,
+                      color: Colors.black,
+                    ),
+                    children: [buildChatView(), buildMessagesView()],
+                  ),
+                ),
+                Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: Text('Model: $_selectedModel'),
+                  ),
+                ),
+              ],
             ),
   );
 
   LlmChatView buildChatView() => LlmChatView(
-    provider: _provider,
+    provider: _provider!,
     welcomeMessage:
         'Hi! I can help you manage your calendar. '
         'What can I do for you?',
@@ -84,7 +113,7 @@ class _ChatScreenState extends State<ChatScreen> {
   );
 
   Widget buildMessagesView() => ListenableBuilder(
-    listenable: _provider,
+    listenable: _provider!,
     builder: (context, child) {
       const courierNewStyle = TextStyle(
         fontFamily: 'Courier New',
@@ -92,9 +121,9 @@ class _ChatScreenState extends State<ChatScreen> {
         fontSize: 16,
       );
 
-      final messages = _provider.messages.toList().reversed.toList();
+      final messages = _provider!.messages.toList().reversed.toList();
       final messageCount = messages.length;
-      final toolCount = _tools.length;
+      final toolCount = _tools!.length;
 
       return ListView.builder(
         itemCount: messageCount + toolCount, // total items
@@ -116,7 +145,7 @@ class _ChatScreenState extends State<ChatScreen> {
           }
 
           // show a tool
-          final tool = _tools[index - messageCount];
+          final tool = _tools![index - messageCount];
           final toolText = _toolText(tool);
 
           return ListTile(
@@ -208,31 +237,29 @@ class _ChatScreenState extends State<ChatScreen> {
         return '[Tool.result: ${part.name}(...) => $prettyResult]';
     }
   }
-}
 
-Future<({Agent agent, Iterable<Tool> tools})> _zapierAgentAndTools() async {
-  final zapierServer = McpClient.remote(
-    'google-calendar',
-    url: Uri.parse(Platform.environment['ZAPIER_MCP_URL']!),
-  );
+  Future<void> _resetProviderAndTools(String model) async {
+    setState(() => _provider = null);
 
-  final zapierTools = await zapierServer.listTools();
-  for (final tool in zapierTools) {
-    print('Tool: ${tool.name}, ${tool.description}');
-  }
+    if (_tools == null) {
+      final zapierTools = await _zapierServer.listTools();
+      for (final tool in zapierTools) {
+        print('Tool: ${tool.name}, ${tool.description}');
+      }
 
-  final tools = [
-    Tool(
-      name: 'get-current-date-time',
-      description: 'Get the current local date and time in ISO-8601 format',
-      onCall: (_) async => {'datetime': DateTime.now().toIso8601String()},
-    ),
-    ...zapierTools,
-  ];
+      _tools = [
+        Tool(
+          name: 'get-current-date-time',
+          description: 'Get the current local date and time in ISO-8601 format',
+          onCall: (_) async => {'datetime': DateTime.now().toIso8601String()},
+        ),
+        ...zapierTools,
+      ];
+    }
 
-  final agent = Agent(
-    'google',
-    systemPrompt: '''
+    final agent = Agent(
+      model,
+      systemPrompt: '''
 You are a helpful calendar assistant.
 
 1. **Ground yourself**
@@ -252,8 +279,13 @@ You are a helpful calendar assistant.
      * `start_time_before` -> "`<DATE>T23:59:59`" (end of day), i.e. the latest an event may begin
      * `end_time_after`  -> "`<DATE>T00:00:00`" (start of day), i.e. the earliest an event may end
 ''',
-    tools: tools,
-  );
+      tools: _tools,
+    );
 
-  return (agent: agent, tools: tools);
+    setState(() {
+      _provider = DartanticProvider(agent);
+      _tools = _tools!;
+      _selectedModel = agent.model;
+    });
+  }
 }
