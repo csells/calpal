@@ -25,6 +25,7 @@ class _ChatScreenState extends State<ChatScreen> {
   );
 
   late final DartanticProvider _provider;
+  late final List<Tool> _tools;
   var _loading = true;
 
   @override
@@ -35,8 +36,9 @@ class _ChatScreenState extends State<ChatScreen> {
 
   Future<void> _setupAgent() async {
     setState(() => _loading = true);
-
-    _provider = DartanticProvider(await _zapierAgent());
+    final (:agent, :tools) = await _zapierAgentAndTools();
+    _provider = DartanticProvider(agent);
+    _tools = tools.toList();
     setState(() => _loading = false);
   }
 
@@ -52,23 +54,21 @@ class _ChatScreenState extends State<ChatScreen> {
     body:
         _loading
             ? const Center(child: CircularProgressIndicator())
-            : buildSplitView(),
-  );
-
-  Widget buildSplitView() => SplitView(
-    viewMode: SplitViewMode.Horizontal,
-    gripColor: Colors.transparent,
-    indicator: const SplitIndicator(
-      viewMode: SplitViewMode.Horizontal,
-      color: Colors.grey,
-    ),
-    gripColorActive: Colors.transparent,
-    activeIndicator: const SplitIndicator(
-      viewMode: SplitViewMode.Horizontal,
-      isActive: true,
-      color: Colors.black,
-    ),
-    children: [buildChatView(), buildMessagesView()],
+            : SplitView(
+              viewMode: SplitViewMode.Horizontal,
+              gripColor: Colors.transparent,
+              indicator: const SplitIndicator(
+                viewMode: SplitViewMode.Horizontal,
+                color: Colors.grey,
+              ),
+              gripColorActive: Colors.transparent,
+              activeIndicator: const SplitIndicator(
+                viewMode: SplitViewMode.Horizontal,
+                isActive: true,
+                color: Colors.black,
+              ),
+              children: [buildChatView(), buildMessagesView()],
+            ),
   );
 
   LlmChatView buildChatView() => LlmChatView(
@@ -91,19 +91,55 @@ class _ChatScreenState extends State<ChatScreen> {
         fontWeight: FontWeight.bold,
         fontSize: 16,
       );
+
       final messages = _provider.messages.toList().reversed.toList();
+      final messageCount = messages.length;
+      final toolCount = _tools.length;
+
       return ListView.builder(
-        itemCount: messages.length,
+        itemCount: messageCount + toolCount, // total items
         reverse: true,
         itemBuilder: (context, index) {
-          final message = messages[index];
-          final text = _messageText(message);
+          if (index < messageCount) {
+            // show a message
+            final message = messages[index];
+            final messageText = _messageText(message);
+            return ListTile(
+              title: Text(
+                messageText,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: courierNewStyle,
+              ),
+              onTap: () {
+                unawaited(
+                  showDialog<void>(
+                    context: context,
+                    builder:
+                        (context) => AlertDialog(
+                          content: SingleChildScrollView(
+                            child: SelectableText(
+                              messageText,
+                              style: courierNewStyle,
+                            ),
+                          ),
+                        ),
+                  ),
+                );
+              },
+            );
+          }
+
+          // show a tool
+          final tool = _tools[index - messageCount];
+          final toolText = _toolText(tool);
+
           return ListTile(
             title: Text(
-              text,
+              toolText,
+              style: courierNewStyle,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: courierNewStyle,
             ),
             onTap: () {
               unawaited(
@@ -112,7 +148,10 @@ class _ChatScreenState extends State<ChatScreen> {
                   builder:
                       (context) => AlertDialog(
                         content: SingleChildScrollView(
-                          child: SelectableText(text, style: courierNewStyle),
+                          child: SelectableText(
+                            toolText,
+                            style: courierNewStyle,
+                          ),
                         ),
                       ),
                 ),
@@ -124,6 +163,17 @@ class _ChatScreenState extends State<ChatScreen> {
     },
   );
 
+  String _toolText(Tool tool) {
+    const encoder = JsonEncoder.withIndent('  ');
+    final schemaSource = tool.inputSchema?.toJson() ?? '{}';
+    final schemaToEncode = json.decode(schemaSource);
+    final prettyInputSchema = encoder.convert(schemaToEncode);
+    final toolText =
+        '[tool]: ${tool.name} (${tool.description})\n'
+        'schema: $prettyInputSchema';
+    return toolText;
+  }
+
   String _messageText(Message message) {
     final buffer = StringBuffer('[${message.role.name}]: ');
     for (final part in message.parts) {
@@ -131,16 +181,18 @@ class _ChatScreenState extends State<ChatScreen> {
         TextPart() => part.text.trim(),
         LinkPart() => '[Link: ${part.url}]',
         DataPart() => '[Data: ${part.mimeType}]',
-        ToolPart() => _toolText(part),
+        ToolPart() => _toolPartText(part),
       });
     }
     return buffer.toString();
   }
 
-  String _toolText(ToolPart part) {
+  String _toolPartText(ToolPart part) {
     switch (part.kind) {
       case ToolPartKind.call:
-        return '[Tool.call: ${part.name}(${part.arguments})]';
+        const encoder = JsonEncoder.withIndent('  ');
+        final prettyArguments = encoder.convert(part.arguments);
+        return '[Tool.call: ${part.name}($prettyArguments)]';
       case ToolPartKind.result:
         const encoder = JsonEncoder.withIndent('  ');
         var result = part.result;
@@ -153,7 +205,7 @@ class _ChatScreenState extends State<ChatScreen> {
             try {
               resultMap['result'] = json.decode(resultValue);
               result = resultMap;
-            } on Exception catch (e) {
+            } on Exception catch (_) {
               // Ignore if it's not valid JSON.
             }
           }
@@ -164,7 +216,7 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 }
 
-Future<Agent> _zapierAgent() async {
+Future<({Agent agent, Iterable<Tool> tools})> _zapierAgentAndTools() async {
   final zapierServer = McpClient.remote(
     'google-calendar',
     url: Uri.parse(Platform.environment['ZAPIER_MCP_URL']!),
@@ -175,7 +227,16 @@ Future<Agent> _zapierAgent() async {
     print('Tool: ${tool.name}, ${tool.description}');
   }
 
-  return Agent(
+  final tools = [
+    Tool(
+      name: 'get-current-date-time',
+      description: 'Get the current local date and time in ISO-8601 format',
+      onCall: (_) async => {'datetime': DateTime.now().toIso8601String()},
+    ),
+    ...zapierTools,
+  ];
+
+  final agent = Agent(
     'google',
     systemPrompt: '''
 You are a helpful calendar assistant.
@@ -197,14 +258,8 @@ You are a helpful calendar assistant.
      * `start_time_before` -> "`<DATE>T23:59:59`" (end of day), i.e. the latest an event may begin
      * `end_time_after`  -> "`<DATE>T00:00:00`" (start of day), i.e. the earliest an event may end
 ''',
-    tools: [
-      Tool(
-        name: 'get-current-date-time',
-        description: 'Get the current local date and time in ISO-8601 format',
-        onCall: (_) async => {'datetime': DateTime.now().toIso8601String()},
-      ),
-      ...zapierTools,
-    ],
-    toolCallingMode: ToolCallingMode.multiStep,
+    tools: tools,
   );
+
+  return (agent: agent, tools: tools);
 }
